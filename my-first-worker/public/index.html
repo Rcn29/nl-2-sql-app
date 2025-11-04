@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>NL → SQL</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    :root { font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, sans-serif; }
+    body { margin: 24px; max-width: 1100px; }
+    h1 { margin: 0 0 10px; }
+    .row { display: grid; gap: 10px; grid-template-columns: 1fr auto; align-items: start; }
+    textarea { width: 100%; min-height: 110px; padding: 12px; border-radius: 10px; border: 1px solid #ccc; font: inherit; }
+    button { padding: 10px 16px; border: 0; border-radius: 10px; background: #111; color: #fff; cursor: pointer; }
+    button[disabled] { opacity: .6; cursor: progress; }
+    .card { margin-top: 16px; border: 1px solid #e5e5e5; border-radius: 12px; padding: 12px; }
+    .label-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .label { font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: .04em; }
+    pre { margin: 8px 0 0; background: #0b0b0b; color: #eaeaea; padding: 12px; border-radius: 10px; overflow:auto; }
+    .err { color: #b00020; white-space: pre-wrap; }
+    .muted { color: #6b7280; font-size: 14px; }
+    table { border-collapse: collapse; margin-top: 12px; width: 100%; }
+    th, td { border: 1px solid #ddd; padding: 6px 8px; text-align: left; }
+    th { background: #f5f5f5; }
+    .tiny { font-size: 12px; color: #6b7280; }
+  </style>
+</head>
+<body>
+  <h1>Natural language → SQL</h1>
+  <p class="muted">Ask a question about the <code>collisions</code> view. We’ll compile SQL via <code>/api/compile-sql</code>; you can then run it locally with DuckDB-WASM against your Parquet.</p>
+
+  <div class="row">
+    <textarea id="q" placeholder="e.g., Top 10 districts by serious crashes in 2024"></textarea>
+    <button id="go">Compile SQL</button>
+  </div>
+
+  <div id="error" class="err"></div>
+
+  <div class="card">
+    <div class="label-row">
+      <div class="label">SQL</div>
+      <div>
+        <button id="run" disabled>Run SQL</button>
+      </div>
+    </div>
+    <pre id="sql">(compiled SQL will appear here)</pre>
+  </div>
+
+  <div class="card">
+    <div class="label">Reason</div>
+    <pre id="reason">(brief explanation)</pre>
+  </div>
+
+  <div class="card">
+    <div class="label">Results <span id="meta" class="tiny"></span></div>
+    <div id="out" class="muted">Run a query to see results…</div>
+  </div>
+
+  <script type="module">
+    // Client-side SELECT-ONLY guard for extra safety
+
+    function stripLiteralsAndComments(sql) {
+      let out = "", i = 0, n = sql.length;
+      while (i < n) {
+        const c = sql[i], nxt = sql[i + 1];
+        if (c === "-" && nxt === "-") { i += 2; while (i < n && sql[i] !== "\n") i++; out += " "; continue; }
+        if (c === "/" && nxt === "*") { i += 2; while (i < n && !(sql[i] === "*" && sql[i + 1] === "/")) i++; if (i < n) i += 2; out += " "; continue; }
+        if (c === "'") { i++; while (i < n) { if (sql[i] === "'" && sql[i+1] === "'") { i += 2; continue; } if (sql[i] === "'") { i++; break; } i++; } out += " "; continue; }
+        if (c === '"') { i++; while (i < n) { if (sql[i] === '"' && sql[i+1] === '"') { i += 2; continue; } if (sql[i] === '"') { i++; break; } i++; } out += " "; continue; }
+        out += c; i++;
+      }
+      return out;
+    }
+    const DISALLOWED_RE = /\b(?:insert|update|delete|merge|create|alter|drop|truncate|replace|grant|revoke|attach|detach|copy|export|load|install|uninstall|call|exec|execute|set|reset|pragma|begin|commit|rollback|savepoint|release|vacuum|analyze|explain|refresh|cluster|reindex|checkpoint)\b/i;
+    const MAJOR_START_RE = /\b(select|insert|update|delete|merge)\b/i;
+    function validateSelectOnly(rawSql) {
+      if (typeof rawSql !== "string") return { ok: false, reason: "SQL must be a string." };
+      const cleaned = stripLiteralsAndComments(rawSql);
+      const trimmed = cleaned.trim();
+      const endsWithSemi = /;\s*$/.test(trimmed);
+      const internalSemis = (trimmed.slice(0, endsWithSemi ? -1 : undefined).match(/;/g) || []).length;
+      if (internalSemis > 0) return { ok: false, reason: "Multiple statements are not allowed." };
+      if (DISALLOWED_RE.test(cleaned)) return { ok: false, reason: `Disallowed keyword: ${cleaned.match(DISALLOWED_RE)[0].toUpperCase()}` };
+      const first = cleaned.match(MAJOR_START_RE)?.[1]?.toLowerCase();
+      if (first && first !== "select") return { ok: false, reason: `Only SELECT is permitted (found ${first.toUpperCase()}).` };
+      if (/^\s*with\b/i.test(cleaned) && !/\bselect\b/i.test(cleaned)) return { ok: false, reason: "WITH must lead to a SELECT." };
+      return { ok: true };
+    }
+
+    // ----Register DOM elements------
+    const q = document.getElementById('q');
+    const go = document.getElementById('go');
+    const runButton = document.getElementById('run');
+    const sqlElement = document.getElementById('sql');
+    const reasonElement = document.getElementById('reason');
+    const errorElement = document.getElementById('error');
+    const out = document.getElementById('out');
+    const meta = document.getElementById('meta');
+
+    let lastSQL = null;
+
+    // --- Compile SQL on worker using AI Gateway ---
+    async function compile(question) {
+      const res = await fetch('/api/compile-sql', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ question, k: 6 })
+      });
+      if (!res.ok) {
+        const t = await res.text().catch(()=> '');
+        throw new Error(`HTTP ${res.status}: ${t || res.statusText}`);
+      }
+      return res.json(); // -> { sql, reason }
+    }
+
+    go.addEventListener('click', async () => {
+      errorElement.textContent = '';
+      sqlElement.textContent = '(compiling...)';
+      reasonElement.textContent = '';
+      out.textContent = 'Run a query to see results…';
+      meta.textContent = '';
+      runButton.disabled = true;
+      const question = q.value.trim();
+      if (!question) {
+        errorElement.textContent = 'Please enter a question.';
+        sqlElement.textContent = '(compiled SQL will appear here)';
+        return;
+      }
+      try {
+        const { sql, reason } = await compile(question);
+        sqlElement.textContent = sql || '(no SQL returned)';
+        reasonElement.textContent = reason || '';
+        lastSQL = sql || null;
+        runButton.disabled = !lastSQL;
+      } catch (e) {
+        errorElement.textContent = String(e?.message || e);
+        sqlElement.textContent = '(compiled SQL will appear here)';
+        lastSQL = null;
+        runButton.disabled = true;
+      }
+    });
+
+    // DuckDB-WASM setup
+    import * as duckdb from "https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm/+esm";
+    const bundles = duckdb.getJsDelivrBundles();
+    const bundle = await duckdb.selectBundle(bundles);
+    const workerURL = URL.createObjectURL(new Blob([`importScripts("${bundle.mainWorker}");`], { type: "text/javascript" }));
+    const db = new duckdb.AsyncDuckDB(new duckdb.ConsoleLogger(), new Worker(workerURL));
+    await db.instantiate(bundle.mainModule, bundle.pthreadWorker);
+    URL.revokeObjectURL(workerURL);
+    const conn = await db.connect();
+
+    // Register Parquet served by the Worker
+    const parquetPath = "/data/collisions_2024_enriched_v2.parquet";
+    const parquetURL = new URL(parquetPath, window.location.href).href;
+    await db.registerFileURL(
+      "collisions_2024_enriched_v2.parquet",
+      parquetURL,
+      duckdb.DuckDBDataProtocol.HTTP,
+      true
+    );
+    await conn.query(`CREATE OR REPLACE VIEW collisions AS SELECT * FROM 'collisions_2024_enriched_v2.parquet';`);
+
+    // --- Render helper ---
+    function renderTable(rows) {
+      if (!rows.length) { out.innerHTML = "<div>No rows</div>"; return; }
+      const cols = Object.keys(rows[0]);
+      const thead = "<thead><tr>" + cols.map(c => "<th>"+c+"</th>").join("") + "</tr></thead>";
+      const tbody = "<tbody>" + rows.map(r => "<tr>" + cols.map(c => "<td>"+(r[c] ?? "")+"</td>").join("") + "</tr>").join("") + "</tbody>";
+      out.innerHTML = "<table>"+thead+tbody+"</table>";
+    }
+
+    // --- Validate SQL before executing when clicking the run button---
+    runButton.addEventListener('click', async () => {
+      errorElement.textContent = '';
+      if (!lastSQL) { errorElement.textContent = 'No SQL to run. Click “Compile SQL” first.'; return; }
+
+      const guard = validateSelectOnly(lastSQL);
+      if (!guard.ok) { errorElement.textContent = `Blocked: ${guard.reason}`; return; }
+
+      runButton.disabled = true;
+      sqlElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const t0 = performance.now();
+      try {
+        const table = await conn.query(lastSQL);
+        const rows = table.toArray();
+        const limited = rows.slice(0, 500);
+        renderTable(limited);
+        const ms = Math.max(1, Math.round(performance.now() - t0));
+        meta.textContent = `— ${limited.length} row(s) shown${rows.length > limited.length ? " (of " + rows.length + ")" : ""}; ${ms} ms`;
+      } catch (e) {
+        errorElement.textContent = "Query error: " + String(e?.message || e);
+        out.textContent = 'Run a query to see results…';
+        meta.textContent = '';
+      } finally {
+        runButton.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

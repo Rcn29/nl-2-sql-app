@@ -1,0 +1,38 @@
+{
+    "xlsx": "./dft-road-casualty-statistics-road-safety-open-dataset-data-guide-2024.xlsx",
+  
+    "singleSheet": {
+      "sheet": "2024_code_list",       
+      "fieldCol": "field name",          
+      "keyCol": "code/format",           
+      "labelCol": "label"                
+    },
+  
+    "columns": [
+      { "column": "police_force",                 "field": "police_force",                 "output": "police_force_label" },
+      { "column": "collision_severity",          "field": "collision_severity",           "output": "collision_severity_label" },
+      { "column": "day_of_week",                 "field": "day_of_week",                  "output": "day_of_week_label" },
+      { "column": "road_type",                   "field": "road_type",                    "output": "road_type_label" },
+      { "column": "local_authority_district",    "field": "local_authority_district",     "output": "local_authority_district_label" },
+      { "column": "local_authority_ons_district", "field": "local_authority_ons_district", "output": "local_authority_ons_district_label" },
+      { "column": "local_authority_highway",      "field": "local_authority_highway",      "output": "local_authority_highway_label" },
+      { "column": "local_authority_highway_current", "field": "local_authority_highway_current", "output": "local_authority_highway_current_label" },
+      { "column": "road_type",                   "field": "road_type",                       "output": "road_type_label" },
+      { "column": "junction_detail",             "field": "junction_detail",              "output": "junction_detail_label" },
+      { "column": "pedestrian_crossing",         "field": "pedestrian_crossing",          "output": "pedestrian_crossing_label" },
+      { "column": "junction_control",            "field": "junction_control",             "output": "junction_control_label" },
+      { "column": "first_road_class",            "field": "first_road_class",             "output": "first_road_class_label" },
+      { "column": "second_road_class",           "field": "second_road_class",            "output": "second_road_class_label" },
+      { "column": "light_conditions",            "field": "light_conditions",             "output": "light_conditions_label" },
+      { "column": "weather_conditions",          "field": "weather_conditions",           "output": "weather_conditions_label" },
+      { "column": "road_surface_conditions",     "field": "road_surface_conditions",      "output": "road_surface_conditions_label" },
+      { "column": "special_conditions_at_site",  "field": "special_conditions_at_site",   "output": "special_conditions_at_site_label" },
+      { "column": "carriageway_hazards",         "field": "carriageway_hazards",          "output": "carriageway_hazards_label" },
+      { "column": "urban_or_rural_area",         "field": "urban_or_rural_area",          "output": "urban_or_rural_area_label" },
+      { "column": "did_police_officer_attend_scene_of_accident", "field": "did_police_officer_attend_scene_of_accident",  "output": "did_police_officer_attend_scene_of_accident_label" },
+      { "column": "trunk_road_flag",         "field": "trunk_road_flag", "output": "trunk_road_flag_label" },
+      { "column": "enhanced_severity_collision",  "field": "enhanced_severity_collision", "output": "enhanced_severity_collision_label" },
+      { "column": "collision_injury_based",  "field": "collision_injury_based", "output": "collision_injury_based_label" }
+    ]
+  }
+  

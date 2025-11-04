@@ -1,0 +1,623 @@
+[
+  {
+    "id": "severity-mix-latest-year",
+    "type": "kpi",
+    "title": "Severity mix (latest year)",
+    "text": "Distribution of crashes by severity in the most recent year. Prefer *_label in SELECT. Latest-year pattern: collision_year = (SELECT MAX(collision_year) FROM collisions).",
+    "sql_base": "SELECT collision_severity_label, COUNT(*) AS crashes\nFROM collisions\nWHERE collision_year = (SELECT MAX(collision_year) FROM collisions)\nGROUP BY 1\nORDER BY crashes DESC;",
+    "examples": [
+      {
+        "nl": "How many crashes of each severity last year?",
+        "sql": "SELECT collision_severity_label, COUNT(*) AS crashes\nFROM collisions\nWHERE collision_year = (SELECT MAX(collision_year) FROM collisions)\nGROUP BY 1\nORDER BY crashes DESC;"
+      },
+      {
+        "nl": "Top severity by crashes in the latest year.",
+        "sql": "SELECT collision_severity_label, COUNT(*) AS crashes\nFROM collisions\nWHERE collision_year = (SELECT MAX(collision_year) FROM collisions)\nGROUP BY 1\nORDER BY crashes DESC\nLIMIT 1;"
+      }
+    ],
+    "tables": ["collisions"],
+    "columns": ["collision_year","collision_severity_label"],
+    "tags": ["severity","latest-year","aggregation"]
+  },
+  {
+    "id": "yoy-total-crashes",
+    "type": "kpi",
+    "title": "Year-over-year total crashes",
+    "text": "Show total crashes per year to see trend. Use simple GROUP BY on collision_year.",
+    "sql_base": "SELECT collision_year, COUNT(*) AS crashes\nFROM collisions\nGROUP BY 1\nORDER BY collision_year;",
+    "examples": [
+      {
+        "nl": "Show total crashes per year.",
+        "sql": "SELECT collision_year, COUNT(*) AS crashes\nFROM collisions\nGROUP BY 1\nORDER BY collision_year;"
+      },
+      {
+        "nl": "Which year had the most crashes?",
+        "sql": "SELECT collision_year, COUNT(*) AS crashes\nFROM collisions\nGROUP BY 1\nORDER BY crashes DESC\nLIMIT 1;"
+      }
+    ],
+    "tables": ["collisions"],
+    "columns": ["collision_year"],
+    "tags": ["trend","time-series"]
+  },
+  {
+    "id": "top-districts-latest-year",
+    "type": "kpi",
+    "title": "Top districts by crashes (latest year)",
+    "text": "Find hotspots by local authority district for the most recent year. Show both code and label for clarity.",
+    "sql_base": "SELECT local_authority_ons_district,\n       local_authority_ons_district_label,\n       COUNT(*) AS crashes\nFROM collisions\nWHERE collision_year = (SELECT MAX(collision_year) FROM collisions)\nGROUP BY 1,2\nORDER BY crashes DESC\nLIMIT 10;",
+    "examples": [
+      {
+        "nl": "Top 10 districts by crashes last year.",
+        "sql": "SELECT local_authority_ons_district,\n       local_authority_ons_district_label,\n       COUNT(*) AS crashes\nFROM collisions\nWHERE collision_year = (SELECT MAX(collision_year) FROM collisions)\nGROUP BY 1,2\nORDER BY crashes DESC\nLIMIT 10;"
+      },
+      {
+        "nl": "Which district had the fewest crashes last year?",
+        "sql": "SELECT local_authority_ons_district,\n       local_authority_ons_district_label,\n       COUNT(*) AS crashes\nFROM collisions\nWHERE collision_year = (SELECT MAX(collision_year) FROM collisions)\nGROUP BY 1,2\nORDER BY crashes ASC\nLIMIT 1;"
+      }
+    ],
+    "tables": ["collisions"],
+    "columns": ["collision_year","local_authority_ons_district","local_authority_ons_district_label"],
+    "tags": ["geography","ranking","latest-year"]
+  },
+  {
+    "id": "weather-impact-latest-year",
+    "type": "kpi",
+    "title": "Weather impact (latest year)",
+    "text": "Crashes by weather condition in the most recent year. Use *_label to present clear categories.",
+    "sql_base": "SELECT weather_conditions_label, COUNT(*) AS crashes\nFROM collisions\nWHERE collision_year = (SELECT MAX(collision_year) FROM collisions)\nGROUP BY 1\nORDER BY crashes DESC;",
+    "examples": [
+      {
+        "nl": "Crashes by weather last year.",
+        "sql": "SELECT weather_conditions_label, COUNT(*) AS crashes\nFROM collisions\nWHERE collision_year = (SELECT MAX(collision_year) FROM collisions)\nGROUP BY 1\nORDER BY crashes DESC;"
+      },
+      {
+        "nl": "Share of crashes in rain last year.",
+        "sql": "WITH t AS (\n  SELECT COUNT(*) AS total\n  FROM collisions\n  WHERE collision_year = (SELECT MAX(collision_year) FROM collisions)\n)\nSELECT 100.0 * COUNT(*) / t.total AS pct_rain\nFROM collisions, t\nWHERE collision_year = (SELECT MAX(collision_year) FROM collisions)\n  AND weather_conditions_label ILIKE '%rain%';"
+      }
+    ],
+    "tables": ["collisions"],
+    "columns": ["collision_year","weather_conditions_label"],
+    "tags": ["weather","latest-year","distribution"]
+  },
+  {
+    "id": "light-conditions-latest-year",
+    "type": "kpi",
+    "title": "Light conditions (latest year)",
+    "text": "Daylight vs darkness distribution for the latest year. Use label categories and optionally compute shares.",
+    "sql_base": "SELECT light_conditions_label, COUNT(*) AS crashes\nFROM collisions\nWHERE collision_year = (SELECT MAX(collision_year) FROM collisions)\nGROUP BY 1\nORDER BY crashes DESC;",
+    "examples": [
+      {
+        "nl": "Daylight vs darkness crashes last year.",
+        "sql": "SELECT light_conditions_label, COUNT(*) AS crashes\nFROM collisions\nWHERE collision_year = (SELECT MAX(collision_year) FROM collisions)\nGROUP BY 1\nORDER BY crashes DESC;"
+      },
+      {
+        "nl": "Night-time share last year.",
+        "sql": "WITH base AS (\n  SELECT * FROM collisions\n  WHERE collision_year = (SELECT MAX(collision_year) FROM collisions)\n), totals AS (SELECT COUNT(*) AS total FROM base)\nSELECT 100.0 * COUNT(*) / totals.total AS pct_night\nFROM base, totals\nWHERE light_conditions_label ILIKE '%dark%';"
+      }
+    ],
+    "tables": ["collisions"],
+    "columns": ["collision_year","light_conditions_label"],
+    "tags": ["light","latest-year","distribution"]
+  },
+  {
+    "id": "road-surface-conditions-latest-year",
+    "type": "kpi",
+    "title": "Road surface conditions (latest year)",
+    "text": "Dry/wet/icy distribution for the latest year using road_surface_conditions_label.",
+    "sql_base": "SELECT road_surface_conditions_label, COUNT(*) AS crashes\nFROM collisions\nWHERE collision_year = (SELECT MAX(collision_year) FROM collisions)\nGROUP BY 1\nORDER BY crashes DESC;",
+    "examples": [
+      {
+        "nl": "Crashes by surface condition last year.",
+        "sql": "SELECT road_surface_conditions_label, COUNT(*) AS crashes\nFROM collisions\nWHERE collision_year = (SELECT MAX(collision_year) FROM collisions)\nGROUP BY 1\nORDER BY crashes DESC;"
+      },
+      {
+        "nl": "How many on wet roads last year?",
+        "sql": "SELECT COUNT(*) AS wet_crashes\nFROM collisions\nWHERE collision_year = (SELECT MAX(collision_year) FROM collisions)\n  AND road_surface_conditions_label ILIKE '%wet%';"
+      }
+    ],
+    "tables": ["collisions"],
+    "columns": ["collision_year","road_surface_conditions_label"],
+    "tags": ["surface","latest-year","distribution"]
+  },
+  {
+    "id": "urban-vs-rural-latest-year",
+    "type": "kpi",
+    "title": "Urban vs rural share (latest year)",
+    "text": "Environment split using urban_or_rural_area_label for the latest year. Optionally compute percentages.",
+    "sql_base": "SELECT urban_or_rural_area_label, COUNT(*) AS crashes\nFROM collisions\nWHERE collision_year = (SELECT MAX(collision_year) FROM collisions)\nGROUP BY 1\nORDER BY crashes DESC;",
+    "examples": [
+      {
+        "nl": "Urban vs rural crashes last year.",
+        "sql": "SELECT urban_or_rural_area_label, COUNT(*) AS crashes\nFROM collisions\nWHERE collision_year = (SELECT MAX(collision_year) FROM collisions)\nGROUP BY 1\nORDER BY crashes DESC;"
+      },
+      {
+        "nl": "What % were rural?",
+        "sql": "WITH base AS (\n  SELECT * FROM collisions\n  WHERE collision_year = (SELECT MAX(collision_year) FROM collisions)\n), totals AS (SELECT COUNT(*) AS total FROM base)\nSELECT 100.0 * COUNT(*) / totals.total AS pct_rural\nFROM base, totals\nWHERE urban_or_rural_area_label ILIKE '%rural%';"
+      }
+    ],
+    "tables": ["collisions"],
+    "columns": ["collision_year","urban_or_rural_area_label"],
+    "tags": ["environment","latest-year","share"]
+  },
+  {
+    "id": "avg-casualties-per-collision",
+    "type": "kpi",
+    "title": "Average casualties per collision (latest year)",
+    "text": "Impact per crash. Compute overall average casualties and optionally by severity.",
+    "sql_base": "SELECT AVG(number_of_casualties)::DOUBLE AS avg_casualties\nFROM collisions\nWHERE collision_year = (SELECT MAX(collision_year) FROM collisions);",
+    "examples": [
+      {
+        "nl": "Average casualties per crash last year.",
+        "sql": "SELECT AVG(number_of_casualties)::DOUBLE AS avg_casualties\nFROM collisions\nWHERE collision_year = (SELECT MAX(collision_year) FROM collisions);"
+      },
+      {
+        "nl": "Average casualties by severity last year.",
+        "sql": "SELECT collision_severity_label,\n       AVG(number_of_casualties)::DOUBLE AS avg_casualties\nFROM collisions\nWHERE collision_year = (SELECT MAX(collision_year) FROM collisions)\nGROUP BY 1\nORDER BY avg_casualties DESC;"
+      }
+    ],
+    "tables": ["collisions"],
+    "columns": ["collision_year","number_of_casualties","collision_severity_label"],
+    "tags": ["impact","average","severity"]
+  },
+  {
+    "id": "avg-vehicles-per-collision",
+    "type": "kpi",
+    "title": "Average vehicles per collision (latest year)",
+    "text": "How many vehicles are involved on average, overall and by severity.",
+    "sql_base": "SELECT AVG(number_of_vehicles)::DOUBLE AS avg_vehicles\nFROM collisions\nWHERE collision_year = (SELECT MAX(collision_year) FROM collisions);",
+    "examples": [
+      {
+        "nl": "Average vehicles per collision last year.",
+        "sql": "SELECT AVG(number_of_vehicles)::DOUBLE AS avg_vehicles\nFROM collisions\nWHERE collision_year = (SELECT MAX(collision_year) FROM collisions);"
+      },
+      {
+        "nl": "Average vehicles by severity last year.",
+        "sql": "SELECT collision_severity_label,\n       AVG(number_of_vehicles)::DOUBLE AS avg_vehicles\nFROM collisions\nWHERE collision_year = (SELECT MAX(collision_year) FROM collisions)\nGROUP BY 1\nORDER BY avg_vehicles DESC;"
+      }
+    ],
+    "tables": ["collisions"],
+    "columns": ["collision_year","number_of_vehicles","collision_severity_label"],
+    "tags": ["vehicles","average","severity"]
+  },
+  {
+    "id": "speed-limit-distribution",
+    "type": "kpi",
+    "title": "Speed limit distribution (latest year)",
+    "text": "Distribution of crashes by posted speed limit in the latest year.",
+    "sql_base": "SELECT speed_limit, COUNT(*) AS crashes\nFROM collisions\nWHERE collision_year = (SELECT MAX(collision_year) FROM collisions)\nGROUP BY 1\nORDER BY speed_limit;",
+    "examples": [
+      {
+        "nl": "Crashes by speed limit last year.",
+        "sql": "SELECT speed_limit, COUNT(*) AS crashes\nFROM collisions\nWHERE collision_year = (SELECT MAX(collision_year) FROM collisions)\nGROUP BY 1\nORDER BY speed_limit;"
+      },
+      {
+        "nl": "Serious+Fatal share at ≥60 mph last year.",
+        "sql": "WITH base AS (\n  SELECT * FROM collisions\n  WHERE collision_year = (SELECT MAX(collision_year) FROM collisions)\n    AND speed_limit >= 60\n), totals AS (SELECT COUNT(*) AS total FROM base)\nSELECT 100.0 * COUNT(*) / totals.total AS pct_serious_fatal\nFROM base, totals\nWHERE collision_severity_label IN ('Serious','Fatal');"
+      }
+    ],
+    "tables": ["collisions"],
+    "columns": ["collision_year","speed_limit","collision_severity_label"],
+    "tags": ["speed","distribution","severity"]
+  },
+  {
+    "id": "time-of-day-hourly",
+    "type": "kpi",
+    "title": "Time-of-day pattern (hourly, latest year)",
+    "text": "Crash volume by hour using time 'HH:MM' (may be null). Extract hour via SUBSTR and CAST; filter NULLs.",
+    "sql_base": "WITH base AS (\n  SELECT * FROM collisions\n  WHERE collision_year = (SELECT MAX(collision_year) FROM collisions)\n), hours AS (\n  SELECT CASE\n    WHEN time IS NULL OR LENGTH(time) < 2 THEN NULL\n    ELSE CAST(SUBSTR(time,1,2) AS INTEGER)\n  END AS hour\n  FROM base\n)\nSELECT hour, COUNT(*) AS crashes\nFROM hours\nWHERE hour IS NOT NULL\nGROUP BY 1\nORDER BY hour;",
+    "examples": [
+      {
+        "nl": "Hourly crash distribution last year.",
+        "sql": "WITH base AS (\n  SELECT * FROM collisions\n  WHERE collision_year = (SELECT MAX(collision_year) FROM collisions)\n), hours AS (\n  SELECT CASE\n    WHEN time IS NULL OR LENGTH(time) < 2 THEN NULL\n    ELSE CAST(SUBSTR(time,1,2) AS INTEGER)\n  END AS hour\n  FROM base\n)\nSELECT hour, COUNT(*) AS crashes\nFROM hours\nWHERE hour IS NOT NULL\nGROUP BY 1\nORDER BY hour;"
+      },
+      {
+        "nl": "Busiest 3 hours last year.",
+        "sql": "SELECT hour, COUNT(*) AS crashes\nFROM (\n  SELECT CASE\n    WHEN time IS NULL OR LENGTH(time) < 2 THEN NULL\n    ELSE CAST(SUBSTR(time,1,2) AS INTEGER)\n  END AS hour\n  FROM collisions\n  WHERE collision_year = (SELECT MAX(collision_year) FROM collisions)\n) h\nWHERE hour IS NOT NULL\nGROUP BY 1\nORDER BY crashes DESC\nLIMIT 3;"
+      }
+    ],
+    "tables": ["collisions"],
+    "columns": ["collision_year","time"],
+    "tags": ["time-of-day","latest-year","distribution"]
+  },
+  {
+    "id": "day-of-week-pattern",
+    "type": "kpi",
+    "title": "Day-of-week pattern (latest year)",
+    "text": "Weekday vs weekend distribution for the latest year using day_of_week_label.",
+    "sql_base": "SELECT day_of_week_label, COUNT(*) AS crashes\nFROM collisions\nWHERE collision_year = (SELECT MAX(collision_year) FROM collisions)\nGROUP BY 1\nORDER BY crashes DESC;",
+    "examples": [
+      {
+        "nl": "Crashes by weekday last year.",
+        "sql": "SELECT day_of_week_label, COUNT(*) AS crashes\nFROM collisions\nWHERE collision_year = (SELECT MAX(collision_year) FROM collisions)\nGROUP BY 1\nORDER BY crashes DESC;"
+      },
+      {
+        "nl": "Weekend vs weekday share last year.",
+        "sql": "WITH base AS (\n  SELECT * FROM collisions\n  WHERE collision_year = (SELECT MAX(collision_year) FROM collisions)\n), totals AS (SELECT COUNT(*) AS total FROM base)\nSELECT\n  SUM(CASE WHEN day_of_week_label IN ('Saturday','Sunday') THEN 1 ELSE 0 END) * 100.0 / totals.total AS pct_weekend,\n  SUM(CASE WHEN day_of_week_label NOT IN ('Saturday','Sunday') THEN 1 ELSE 0 END) * 100.0 / totals.total AS pct_weekday\nFROM base, totals;"
+      }
+    ],
+    "tables": ["collisions"],
+    "columns": ["collision_year","day_of_week_label"],
+    "tags": ["weekday","latest-year","share"]
+  },
+  {
+    "id": "junction-detail-risk",
+    "type": "kpi",
+    "title": "Junction detail risk (latest year)",
+    "text": "Top junction types by crash count in the latest year; optionally filter to serious crashes.",
+    "sql_base": "SELECT junction_detail_label, COUNT(*) AS crashes\nFROM collisions\nWHERE collision_year = (SELECT MAX(collision_year) FROM collisions)\nGROUP BY 1\nORDER BY crashes DESC\nLIMIT 10;",
+    "examples": [
+      {
+        "nl": "Top junction types by crash count last year.",
+        "sql": "SELECT junction_detail_label, COUNT(*) AS crashes\nFROM collisions\nWHERE collision_year = (SELECT MAX(collision_year) FROM collisions)\nGROUP BY 1\nORDER BY crashes DESC\nLIMIT 10;"
+      },
+      {
+        "nl": "Serious crashes by junction type last year.",
+        "sql": "SELECT junction_detail_label, COUNT(*) AS serious_crashes\nFROM collisions\nWHERE collision_year = (SELECT MAX(collision_year) FROM collisions)\n  AND collision_severity_label = 'Serious'\nGROUP BY 1\nORDER BY serious_crashes DESC;"
+      }
+    ],
+    "tables": ["collisions"],
+    "columns": ["collision_year","junction_detail_label","collision_severity_label"],
+    "tags": ["junction","ranking","latest-year"]
+  },
+  {
+    "id": "road-class-contributions",
+    "type": "kpi",
+    "title": "Road class contributions (latest year)",
+    "text": "Crash counts by first and second road class labels in the latest year.",
+    "sql_base": "SELECT first_road_class_label, COUNT(*) AS crashes\nFROM collisions\nWHERE collision_year = (SELECT MAX(collision_year) FROM collisions)\nGROUP BY 1\nORDER BY crashes DESC;",
+    "examples": [
+      {
+        "nl": "Crashes by first road class last year.",
+        "sql": "SELECT first_road_class_label, COUNT(*) AS crashes\nFROM collisions\nWHERE collision_year = (SELECT MAX(collision_year) FROM collisions)\nGROUP BY 1\nORDER BY crashes DESC;"
+      },
+      {
+        "nl": "Second road class top 5 last year.",
+        "sql": "SELECT second_road_class_label, COUNT(*) AS crashes\nFROM collisions\nWHERE collision_year = (SELECT MAX(collision_year) FROM collisions)\nGROUP BY 1\nORDER BY crashes DESC\nLIMIT 5;"
+      }
+    ],
+    "tables": ["collisions"],
+    "columns": ["collision_year","first_road_class_label","second_road_class_label"],
+    "tags": ["road-class","latest-year","ranking"]
+  },
+  {
+    "id": "trunk-road-vs-nontrunk",
+    "type": "kpi",
+    "title": "Trunk road vs non-trunk (latest year)",
+    "text": "Compare trunk vs non-trunk totals and severity. Use label if available.",
+    "sql_base": "SELECT trunk_road_flag_label, COUNT(*) AS crashes\nFROM collisions\nWHERE collision_year = (SELECT MAX(collision_year) FROM collisions)\nGROUP BY 1\nORDER BY crashes DESC;",
+    "examples": [
+      {
+        "nl": "Serious+Fatal on trunk vs non-trunk last year.",
+        "sql": "SELECT trunk_road_flag_label, COUNT(*) AS serious_fatal\nFROM collisions\nWHERE collision_year = (SELECT MAX(collision_year) FROM collisions)\n  AND collision_severity_label IN ('Serious','Fatal')\nGROUP BY 1\nORDER BY serious_fatal DESC;"
+      },
+      {
+        "nl": "Share on trunk roads last year.",
+        "sql": "WITH base AS (\n  SELECT * FROM collisions\n  WHERE collision_year = (SELECT MAX(collision_year) FROM collisions)\n), totals AS (SELECT COUNT(*) AS total FROM base)\nSELECT 100.0 * COUNT(*) / totals.total AS pct_trunk\nFROM base, totals\nWHERE trunk_road_flag_label ILIKE '%trunk%';"
+      }
+    ],
+    "tables": ["collisions"],
+    "columns": ["collision_year","trunk_road_flag_label","collision_severity_label"],
+    "tags": ["trunk","latest-year","severity","share"]
+  },
+
+  {
+    "id": "labels-preferred-selection",
+    "type": "semantics",
+    "title": "Prefer *_label in SELECT; keep codes for filters",
+    "text": "Use human-readable *_label columns in SELECT/GROUP BY for clarity. Keep numeric code columns for filters/joins. With Option A (enriched Parquet), most queries need no joins.",
+    "sql_base": "SELECT collision_severity_label, COUNT(*) AS crashes\nFROM collisions\nGROUP BY 1\nORDER BY crashes DESC;",
+    "examples": [
+      {
+        "nl": "Show crashes by severity using labels.",
+        "sql": "SELECT collision_severity_label, COUNT(*) AS crashes\nFROM collisions\nGROUP BY 1\nORDER BY crashes DESC;"
+      },
+      {
+        "nl": "Filter by district code but display district name.",
+        "sql": "SELECT local_authority_ons_district, local_authority_ons_district_label, COUNT(*) AS crashes\nFROM collisions\nWHERE local_authority_ons_district = 12\nGROUP BY 1,2\nORDER BY crashes DESC;"
+      }
+    ],
+    "tables": ["collisions"],
+    "columns": ["collision_severity_label","local_authority_ons_district","local_authority_ons_district_label"],
+    "tags": ["labels","readability","filters"]
+  },
+  {
+    "id": "latest-year-pattern",
+    "type": "semantics",
+    "title": "Latest-year pattern",
+    "text": "Standard filter for the most recent full year: WHERE collision_year = (SELECT MAX(collision_year) FROM collisions). Reuse this for consistent year scoping.",
+    "sql_base": "SELECT collision_severity_label, COUNT(*) AS crashes\nFROM collisions\nWHERE collision_year = (SELECT MAX(collision_year) FROM collisions)\nGROUP BY 1\nORDER BY crashes DESC;",
+    "examples": [
+      {
+        "nl": "Top weather conditions in the latest year.",
+        "sql": "SELECT weather_conditions_label, COUNT(*) AS crashes\nFROM collisions\nWHERE collision_year = (SELECT MAX(collision_year) FROM collisions)\nGROUP BY 1\nORDER BY crashes DESC;"
+      },
+      {
+        "nl": "Crashes per district for the most recent year.",
+        "sql": "SELECT local_authority_ons_district_label, COUNT(*) AS crashes\nFROM collisions\nWHERE collision_year = (SELECT MAX(collision_year) FROM collisions)\nGROUP BY 1\nORDER BY crashes DESC;"
+      }
+    ],
+    "tables": ["collisions"],
+    "columns": ["collision_year"],
+    "tags": ["scoping","time","latest-year"]
+  },
+  {
+    "id": "date-string-semantics",
+    "type": "semantics",
+    "title": "Date is DD/MM/YYYY (UTF8): parse or substring",
+    "text": "The date column is a UTF8 string in DD/MM/YYYY. For robust filtering/aggregation, parse with STRPTIME; for quick month filters, SUBSTR(date,4,2).",
+    "sql_base": "SELECT STRFTIME(STRPTIME(date, '%d/%m/%Y'), '%Y-%m') AS ym, COUNT(*) AS crashes\nFROM collisions\nGROUP BY 1\nORDER BY ym;",
+    "examples": [
+      {
+        "nl": "Crashes in May 2024.",
+        "sql": "SELECT COUNT(*) AS crashes\nFROM collisions\nWHERE collision_year = 2024 AND SUBSTR(date,4,2) = '05';"
+      },
+      {
+        "nl": "Monthly trend in the latest year.",
+        "sql": "SELECT STRFTIME(STRPTIME(date, '%d/%m/%Y'), '%Y-%m') AS ym, COUNT(*) AS crashes\nFROM collisions\nWHERE collision_year = (SELECT MAX(collision_year) FROM collisions)\nGROUP BY 1\nORDER BY ym;"
+      }
+    ],
+    "tables": ["collisions"],
+    "columns": ["date","collision_year"],
+    "tags": ["date","parsing","format"]
+  },
+  {
+    "id": "time-hour-extraction",
+    "type": "semantics",
+    "title": "Time is HH:MM (nullable): extract hour safely",
+    "text": "The time column may be null. Extract hour with SUBSTR(time,1,2) and CAST to INTEGER; exclude NULL before grouping.",
+    "sql_base": "SELECT CAST(SUBSTR(time,1,2) AS INTEGER) AS hour, COUNT(*) AS crashes\nFROM collisions\nWHERE time IS NOT NULL\nGROUP BY 1\nORDER BY hour;",
+    "examples": [
+      {
+        "nl": "Hourly crashes in the latest year.",
+        "sql": "SELECT CAST(SUBSTR(time,1,2) AS INTEGER) AS hour, COUNT(*) AS crashes\nFROM collisions\nWHERE collision_year = (SELECT MAX(collision_year) FROM collisions) AND time IS NOT NULL\nGROUP BY 1\nORDER BY hour;"
+      },
+      {
+        "nl": "Busiest 3 hours overall.",
+        "sql": "SELECT CAST(SUBSTR(time,1,2) AS INTEGER) AS hour, COUNT(*) AS crashes\nFROM collisions\nWHERE time IS NOT NULL\nGROUP BY 1\nORDER BY crashes DESC\nLIMIT 3;"
+      }
+    ],
+    "tables": ["collisions"],
+    "columns": ["time","collision_year"],
+    "tags": ["time-of-day","nulls","extraction"]
+  },
+  {
+    "id": "null-safe-filters",
+    "type": "semantics",
+    "title": "Null-safe filtering & COALESCE patterns",
+    "text": "Use IS NULL/IS NOT NULL for presence checks. For grouping with unknowns, COALESCE(label,'Unknown'). Be careful not to drop NULL rows by accident.",
+    "sql_base": "SELECT COALESCE(weather_conditions_label,'Unknown') AS weather, COUNT(*) AS crashes\nFROM collisions\nGROUP BY 1\nORDER BY crashes DESC;",
+    "examples": [
+      {
+        "nl": "Count collisions with missing time.",
+        "sql": "SELECT COUNT(*) AS no_time\nFROM collisions\nWHERE time IS NULL;"
+      },
+      {
+        "nl": "Group weather including unknowns.",
+        "sql": "SELECT COALESCE(weather_conditions_label,'Unknown') AS weather, COUNT(*) AS crashes\nFROM collisions\nGROUP BY 1\nORDER BY crashes DESC;"
+      }
+    ],
+    "tables": ["collisions"],
+    "columns": ["time","weather_conditions_label"],
+    "tags": ["nulls","coalesce","quality"]
+  },
+  {
+    "id": "weekday-sorting",
+    "type": "semantics",
+    "title": "Meaningful weekday sorting",
+    "text": "Labels sort alphabetically by default. For Mon→Sun order, use a CASE expression in ORDER BY.",
+    "sql_base": "SELECT day_of_week_label, COUNT(*) AS crashes\nFROM collisions\nGROUP BY 1\nORDER BY CASE day_of_week_label\n  WHEN 'Monday' THEN 1 WHEN 'Tuesday' THEN 2 WHEN 'Wednesday' THEN 3\n  WHEN 'Thursday' THEN 4 WHEN 'Friday' THEN 5 WHEN 'Saturday' THEN 6 WHEN 'Sunday' THEN 7\nEND;",
+    "examples": [
+      {
+        "nl": "Crashes by weekday in calendar order.",
+        "sql": "SELECT day_of_week_label, COUNT(*) AS crashes\nFROM collisions\nGROUP BY 1\nORDER BY CASE day_of_week_label\n  WHEN 'Monday' THEN 1 WHEN 'Tuesday' THEN 2 WHEN 'Wednesday' THEN 3\n  WHEN 'Thursday' THEN 4 WHEN 'Friday' THEN 5 WHEN 'Saturday' THEN 6 WHEN 'Sunday' THEN 7\nEND;"
+      },
+      {
+        "nl": "Weekend vs weekday totals.",
+        "sql": "SELECT SUM(CASE WHEN day_of_week_label IN ('Saturday','Sunday') THEN 1 ELSE 0 END) AS weekend,\n       SUM(CASE WHEN day_of_week_label NOT IN ('Saturday','Sunday') THEN 1 ELSE 0 END) AS weekday\nFROM collisions;"
+      }
+    ],
+    "tables": ["collisions"],
+    "columns": ["day_of_week_label"],
+    "tags": ["ordering","weekday","presentation"]
+  },
+  {
+    "id": "future-proof-joins-note",
+    "type": "semantics",
+    "title": "If dims are external: standard join keys",
+    "text": "You enriched labels inside the fact table (no joins needed). If dimensions are external later, join codes to dim tables on code columns (e.g., collisions.weather_conditions = dim_weather.code).",
+    "sql_base": "SELECT w.label AS weather, COUNT(*) AS crashes\nFROM collisions c\nLEFT JOIN dim_weather w ON c.weather_conditions = w.code\nGROUP BY 1\nORDER BY crashes DESC;",
+    "examples": [
+      {
+        "nl": "Weather counts via a join (if labels aren’t embedded).",
+        "sql": "SELECT w.label AS weather, COUNT(*) AS crashes\nFROM collisions c\nLEFT JOIN dim_weather w ON c.weather_conditions = w.code\nGROUP BY 1\nORDER BY crashes DESC;"
+      },
+      {
+        "nl": "Severity by join (no embedded labels).",
+        "sql": "SELECT s.label AS severity, COUNT(*) AS crashes\nFROM collisions c\nLEFT JOIN dim_severity s ON c.collision_severity = s.code\nGROUP BY 1\nORDER BY crashes DESC;"
+      }
+    ],
+    "tables": ["collisions"],
+    "columns": ["weather_conditions","collision_severity"],
+    "tags": ["joins","dimensions","fallback"]
+  },
+  {
+    "id": "colnote-collision-severity",
+    "type": "column",
+    "title": "Collision severity / label",
+    "text": "Use collision_severity_label for outputs. Typical labels include Fatal, Serious, Slight. Filter by label for readability; retain code only if necessary.",
+    "sql_base": "SELECT collision_severity_label, COUNT(*) AS crashes\nFROM collisions\nGROUP BY 1\nORDER BY crashes DESC;",
+    "examples": [
+      {
+        "nl": "Serious crashes in the latest year.",
+        "sql": "SELECT COUNT(*) AS serious\nFROM collisions\nWHERE collision_year = (SELECT MAX(collision_year) FROM collisions)\n  AND collision_severity_label = 'Serious';"
+      },
+      {
+        "nl": "Severity mix overall.",
+        "sql": "SELECT collision_severity_label, COUNT(*) AS crashes\nFROM collisions\nGROUP BY 1\nORDER BY crashes DESC;"
+      }
+    ],
+    "tables": ["collisions"],
+    "columns": ["collision_severity","collision_severity_label","collision_year"],
+    "tags": ["severity","labels"]
+  },
+  {
+    "id": "colnote-day-of-week",
+    "type": "column",
+    "title": "Day of week / label",
+    "text": "Use day_of_week_label. For ordered weekdays, use CASE in ORDER BY. Weekend is Saturday/Sunday.",
+    "sql_base": "SELECT day_of_week_label, COUNT(*) AS crashes\nFROM collisions\nGROUP BY 1\nORDER BY crashes DESC;",
+    "examples": [
+      {
+        "nl": "Weekend share in the latest year.",
+        "sql": "WITH base AS (\n  SELECT * FROM collisions\n  WHERE collision_year = (SELECT MAX(collision_year) FROM collisions)\n), totals AS (SELECT COUNT(*) AS total FROM base)\nSELECT 100.0 * SUM(CASE WHEN day_of_week_label IN ('Saturday','Sunday') THEN 1 ELSE 0 END) / totals.total AS pct_weekend\nFROM base, totals;"
+      },
+      {
+        "nl": "Crashes by weekday in calendar order.",
+        "sql": "SELECT day_of_week_label, COUNT(*) AS crashes\nFROM collisions\nGROUP BY 1\nORDER BY CASE day_of_week_label\n  WHEN 'Monday' THEN 1 WHEN 'Tuesday' THEN 2 WHEN 'Wednesday' THEN 3\n  WHEN 'Thursday' THEN 4 WHEN 'Friday' THEN 5 WHEN 'Saturday' THEN 6 WHEN 'Sunday' THEN 7\nEND;"
+      }
+    ],
+    "tables": ["collisions"],
+    "columns": ["day_of_week_label","collision_year"],
+    "tags": ["weekday","ordering"]
+  },
+  {
+    "id": "colnote-speed-limit",
+    "type": "column",
+    "title": "Speed limit (INT)",
+    "text": "Posted limit in mph. Common buckets: 20/30/40/50/60/70. Consider bucketing for charts and filtering for high-speed analysis.",
+    "sql_base": "SELECT speed_limit, COUNT(*) AS crashes\nFROM collisions\nGROUP BY 1\nORDER BY speed_limit;",
+    "examples": [
+      {
+        "nl": "Crashes at 60+ mph in latest year.",
+        "sql": "SELECT COUNT(*) AS high_speed\nFROM collisions\nWHERE collision_year = (SELECT MAX(collision_year) FROM collisions)\n  AND speed_limit >= 60;"
+      },
+      {
+        "nl": "Avg severity by speed bucket.",
+        "sql": "WITH b AS (\n  SELECT CASE\n    WHEN speed_limit < 30 THEN '<30'\n    WHEN speed_limit < 40 THEN '30-39'\n    WHEN speed_limit < 50 THEN '40-49'\n    WHEN speed_limit < 60 THEN '50-59'\n    WHEN speed_limit < 70 THEN '60-69'\n    ELSE '70+'\n  END AS bucket, collision_severity_label\n  FROM collisions\n)\nSELECT bucket, COUNT(*) AS crashes\nFROM b\nGROUP BY 1\nORDER BY bucket;"
+      }
+    ],
+    "tables": ["collisions"],
+    "columns": ["speed_limit","collision_year","collision_severity_label"],
+    "tags": ["speed","bucketing"]
+  },
+  {
+    "id": "colnote-date",
+    "type": "column",
+    "title": "Date (UTF8 DD/MM/YYYY)",
+    "text": "Store is string DD/MM/YYYY. Prefer STRPTIME(date,'%d/%m/%Y') for robust date logic; quick month filters can use SUBSTR(date,4,2).",
+    "sql_base": "SELECT STRFTIME(STRPTIME(date, '%d/%m/%Y'), '%Y-%m') AS ym, COUNT(*) AS crashes\nFROM collisions\nGROUP BY 1\nORDER BY ym;",
+    "examples": [
+      {
+        "nl": "Crashes in March 2024.",
+        "sql": "SELECT COUNT(*) AS n\nFROM collisions\nWHERE collision_year = 2024 AND SUBSTR(date,4,2) = '03';"
+      },
+      {
+        "nl": "Q2 vs Q3 in latest year.",
+        "sql": "SELECT CASE\n  WHEN CAST(STRFTIME(STRPTIME(date,'%d/%m/%Y'),'%m') AS INTEGER) BETWEEN 4 AND 6 THEN 'Q2'\n  WHEN CAST(STRFTIME(STRPTIME(date,'%d/%m/%Y'),'%m') AS INTEGER) BETWEEN 7 AND 9 THEN 'Q3'\n  ELSE 'Other'\nEND AS quarter, COUNT(*) AS crashes\nFROM collisions\nWHERE collision_year = (SELECT MAX(collision_year) FROM collisions)\nGROUP BY 1\nORDER BY crashes DESC;"
+      }
+    ],
+    "tables": ["collisions"],
+    "columns": ["date","collision_year"],
+    "tags": ["date","parsing"]
+  },
+  {
+    "id": "colnote-time",
+    "type": "column",
+    "title": "Time (UTF8 HH:MM, nullable)",
+    "text": "May be missing. Extract hour via SUBSTR/CAST, filter out NULLs before aggregation.",
+    "sql_base": "SELECT CAST(SUBSTR(time,1,2) AS INTEGER) AS hour, COUNT(*) AS crashes\nFROM collisions\nWHERE time IS NOT NULL\nGROUP BY 1\nORDER BY hour;",
+    "examples": [
+      {
+        "nl": "How many rows have no time?",
+        "sql": "SELECT COUNT(*) AS no_time\nFROM collisions\nWHERE time IS NULL;"
+      },
+      {
+        "nl": "Peak hours (top 3) latest year.",
+        "sql": "SELECT CAST(SUBSTR(time,1,2) AS INTEGER) AS hour, COUNT(*) AS crashes\nFROM collisions\nWHERE collision_year = (SELECT MAX(collision_year) FROM collisions) AND time IS NOT NULL\nGROUP BY 1\nORDER BY crashes DESC\nLIMIT 3;"
+      }
+    ],
+    "tables": ["collisions"],
+    "columns": ["time","collision_year"],
+    "tags": ["time","nulls","hour"]
+  },
+  {
+    "id": "colnote-district",
+    "type": "column",
+    "title": "Local authority district / label",
+    "text": "Use local_authority_ons_district_label in outputs; keep the numeric code for precise filters or downstream joins.",
+    "sql_base": "SELECT local_authority_ons_district_label, COUNT(*) AS crashes\nFROM collisions\nGROUP BY 1\nORDER BY crashes DESC;",
+    "examples": [
+      {
+        "nl": "Top 5 districts latest year.",
+        "sql": "SELECT local_authority_ons_district_label, COUNT(*) AS crashes\nFROM collisions\nWHERE collision_year = (SELECT MAX(collision_year) FROM collisions)\nGROUP BY 1\nORDER BY crashes DESC\nLIMIT 5;"
+      },
+      {
+        "nl": "Crashes for district code 99 over time.",
+        "sql": "SELECT collision_year, COUNT(*) AS crashes\nFROM collisions\nWHERE local_authority_ons_district = 99\nGROUP BY 1\nORDER BY collision_year;"
+      }
+    ],
+    "tables": ["collisions"],
+    "columns": ["local_authority_ons_district","local_authority_ons_district_label","collision_year"],
+    "tags": ["geography","labels","filters"]
+  },
+  {
+    "id": "colnote-road-class",
+    "type": "column",
+    "title": "First/Second road class labels",
+    "text": "Use first_road_class_label and second_road_class_label for readability. Useful for ranking and comparisons.",
+    "sql_base": "SELECT first_road_class_label, COUNT(*) AS crashes\nFROM collisions\nGROUP BY 1\nORDER BY crashes DESC;",
+    "examples": [
+      {
+        "nl": "Crashes by first road class latest year.",
+        "sql": "SELECT first_road_class_label, COUNT(*) AS crashes\nFROM collisions\nWHERE collision_year = (SELECT MAX(collision_year) FROM collisions)\nGROUP BY 1\nORDER BY crashes DESC;"
+      },
+      {
+        "nl": "Compare first vs second road class counts.",
+        "sql": "SELECT 'first' AS role, first_road_class_label AS label, COUNT(*) AS crashes\nFROM collisions\nGROUP BY 2\nUNION ALL\nSELECT 'second' AS role, second_road_class_label AS label, COUNT(*) AS crashes\nFROM collisions\nGROUP BY 2\nORDER BY crashes DESC;"
+      }
+    ],
+    "tables": ["collisions"],
+    "columns": ["first_road_class_label","second_road_class_label","collision_year"],
+    "tags": ["road-class","labels"]
+  },
+  {
+    "id": "colnote-urban-rural",
+    "type": "column",
+    "title": "Urban or rural area / label",
+    "text": "Use urban_or_rural_area_label. Handy for shares and comparisons; combine with severity for risk insights.",
+    "sql_base": "SELECT urban_or_rural_area_label, COUNT(*) AS crashes\nFROM collisions\nGROUP BY 1\nORDER BY crashes DESC;",
+    "examples": [
+      {
+        "nl": "Urban vs rural share latest year.",
+        "sql": "WITH base AS (\n  SELECT * FROM collisions\n  WHERE collision_year = (SELECT MAX(collision_year) FROM collisions)\n), totals AS (SELECT COUNT(*) AS total FROM base)\nSELECT 100.0 * SUM(CASE WHEN urban_or_rural_area_label ILIKE '%rural%' THEN 1 ELSE 0 END) / totals.total AS pct_rural\nFROM base, totals;"
+      },
+      {
+        "nl": "Serious crashes urban vs rural latest year.",
+        "sql": "SELECT urban_or_rural_area_label, COUNT(*) AS serious\nFROM collisions\nWHERE collision_year = (SELECT MAX(collision_year) FROM collisions)\n  AND collision_severity_label = 'Serious'\nGROUP BY 1\nORDER BY serious DESC;"
+      }
+    ],
+    "tables": ["collisions"],
+    "columns": ["urban_or_rural_area_label","collision_year","collision_severity_label"],
+    "tags": ["environment","shares"]
+  },
+  {
+    "id": "colnote-trunk-flag",
+    "type": "column",
+    "title": "Trunk road flag / label",
+    "text": "Use trunk_road_flag_label for readability; often analyzed with severity or speed.",
+    "sql_base": "SELECT trunk_road_flag_label, COUNT(*) AS crashes\nFROM collisions\nGROUP BY 1\nORDER BY crashes DESC;",
+    "examples": [
+      {
+        "nl": "Serious+Fatal share on trunk roads latest year.",
+        "sql": "WITH base AS (\n  SELECT * FROM collisions\n  WHERE collision_year = (SELECT MAX(collision_year) FROM collisions)\n), totals AS (SELECT COUNT(*) AS total FROM base WHERE trunk_road_flag_label ILIKE '%trunk%')\nSELECT 100.0 * SUM(CASE WHEN collision_severity_label IN ('Serious','Fatal') AND trunk_road_flag_label ILIKE '%trunk%' THEN 1 ELSE 0 END) / totals.total AS pct_serious_fatal_on_trunk\nFROM base, totals;"
+      },
+      {
+        "nl": "Crashes by trunk vs non-trunk.",
+        "sql": "SELECT trunk_road_flag_label, COUNT(*) AS crashes\nFROM collisions\nGROUP BY 1\nORDER BY crashes DESC;"
+      }
+    ],
+    "tables": ["collisions"],
+    "columns": ["trunk_road_flag_label","collision_year","collision_severity_label"],
+    "tags": ["trunk","severity","shares"]
+  }
+]
