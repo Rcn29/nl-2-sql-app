@@ -56,3 +56,9 @@ Now that the Parquet file is in R2, the steps to get the app running are as foll
 5. Run "wrangler deploy" to get your base URL (should be of the form \<your-application-name\>.\<your-account-name\>.workers.dev)
 6. Upsert your **snippets.json** file with the url "<your-base-url\>/api/snippets.upsert", with content type application/json and with the in-file **snippets.json** (in Powershell this is **Invoke-RestMethod -Method Post -Uri "<your-base-url\>/api/snippets/upsert"  -ContentType 'application/json' -InFile 'snippets.json'**)
 7. You should be ready to run the application.
+### Sample queries:
+- "What is the safest district in rainy weather?"
+- "Rank the least safe districts in dry weather"
+- "What are the least safe districts?"
+- "What is the least safe weather?"
+- "What weather does police show up most often in?"
